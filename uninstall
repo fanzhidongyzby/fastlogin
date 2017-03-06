@@ -1,0 +1,5 @@
+#!/bin/bash
+cd $(dirname $0)
+ROOT=$(pwd)
+sudo rm -f /usr/local/bin/x
+sudo rm -rf /usr/local/fastlogin

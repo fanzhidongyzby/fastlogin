@@ -1,0 +1,8 @@
+#!/bin/bash
+cd $(dirname $0)
+ROOT=$(pwd)
+sudo rm -f /usr/local/bin/x
+sudo mkdir -p /usr/local/fastlogin
+sudo cp $ROOT/x $ROOT/ssh-expect $ROOT/main.py /usr/local/fastlogin
+sudo ln -s /usr/local/fastlogin/x /usr/local/bin/x
+sudo chmod +x /usr/local/fastlogin/*
