@@ -3,6 +3,26 @@ import os
 import shutil
 import traceback
 import commands
+import base64
+
+
+class WhiteList:
+    WHITE_LIST_CONFIG = os.path.expanduser("~") + "/.fastlogin.whitelist"
+
+    def __init__(self):
+        self.config = []
+        try:
+            with open(WhiteList.WHITE_LIST_CONFIG, "r") as config_file:
+                lines = config_file.readlines()
+                for line in lines:
+                    if line:
+                        self.config.append(line.strip())
+        except:
+            pass
+
+    def __contains__(self, item):
+        return self.config and item in self.config
+
 
 class LoginInfo:
     CACHE_FILE = os.path.expanduser("~") + "/.fastlogin.info"
@@ -20,6 +40,7 @@ class LoginInfo:
         os.system("touch " + LoginInfo.CACHE_FILE)
         self.password_changed = False
         self.host_map = {}
+        self.whitelist = WhiteList()
 
     def __parse(self, lines):
         host_map = {}
@@ -31,7 +52,7 @@ class LoginInfo:
             (host, user, password) = (cols[0], cols[1], cols[2])
             if not host_map.has_key(host):
                 host_map[host] = {}
-            host_map[host][user] = password
+            host_map[host][user] = base64.decodestring(password)
             self.host_map = host_map
 
     def search(self, host, user, password):
@@ -109,6 +130,8 @@ class LoginInfo:
         host_map = self.host_map
 
         for (host, user_map) in host_map.items():
+            if host in self.whitelist:
+                continue
             for (user, password) in user_map.items():
                 if host == host0 and user == user0 and password == password0:
                     if len(host_map[host]) == 1:
@@ -120,7 +143,7 @@ class LoginInfo:
 
                     # refresh config
                     self.save()
-                    break
+                    return
 
     def save(self):
         host_map = self.host_map
@@ -129,7 +152,7 @@ class LoginInfo:
             with open(LoginInfo.CACHE_FILE_TMP, "w") as cache:
                 for (host, user_map) in host_map.items():
                     for (user, password) in user_map.items():
-                        cache.write("{0} {1} {2}\n".format(host, user, password))
+                        cache.write("{0} {1} {2}\n".format(host, user, base64.encodestring(password).strip()))
                 cache.flush()
             # copy file after saved ok
             shutil.copyfile(LoginInfo.CACHE_FILE_TMP, LoginInfo.CACHE_FILE)
@@ -153,15 +176,39 @@ class LoginInfo:
 
 
 class FastLogin:
-    def __init__(self):
-        pass
+    def __init__(self, option_values):
+        self.password_suffix = None
+        self.show_info = False
+        self.show_white_list = False
+        self.show_help = False
+
+        if not option_values:
+            return
+        if "-s" in option_values:
+            self.password_suffix = option_values["-s"]
+            if not self.password_suffix:
+                print "Password suffix not provided."
+                exit(1)
+        elif "-h" in option_values:
+            self.show_help = True
+        elif "-i" in option_values:
+            self.show_info = True
+        elif "-w" in option_values:
+            self.show_white_list = True
 
     def execute(self, host, user, password):
         login_info = LoginInfo()
+
+        # show all hosts
         if not host:
             login_info.show_hosts()
             return
+
+        # search password
         (host, user, password) = login_info.search(host, user, password)
+        password = password if not self.password_suffix else password + self.password_suffix
+
+        # ssh login
         code = os.system("expect ssh-expect {0} {1} {2} 2>/dev/null".format(host, user, password))
         if code == 0:
             if login_info.password_changed:
@@ -175,14 +222,47 @@ class FastLogin:
 
 
 if __name__ == '__main__':
-    (host, user, password) = (None, None, None)
+    (option, value, host, user, password) = (None, None, None, None, None)
+
+    # retrieve option
+    option_values = {}
+    login_args = []
+    index = 1
     length = len(sys.argv)
-    if length >= 4:
-        password = sys.argv[3]
-    if length >= 3:
-        user = sys.argv[2]
+    while index < length:
+        arg = sys.argv[index]
+        if arg.startswith("-"):
+            option = arg
+            if index + 1 < length:
+                value = sys.argv[index + 1]
+            option_values[option] = value
+            index += 2
+        else:
+            login_args.append(arg)
+            index += 1
+
+    # process login info
+    length = len(login_args)
+    if length >= 1:
+        host = login_args[0]
     if length >= 2:
-        host = sys.argv[1]
+        user = login_args[1]
+    if length >= 3:
+        password = login_args[2]
+
+    # run command
+    fast_login = FastLogin(option_values)
+    if fast_login.show_help:
+        print "FastLogin:\n" \
+              "\tx host [user] [password] [option [value]]\n" \
+              "options:\n" \
+              "\t-s suffix\t\tAppend dynamic suffix to password\n" \
+              "\t-i\t\t\tShow recorded login info\n" \
+              "\t-w\t\t\tShow white list config\n" \
+              "\t-h\t\t\tShow this help message\n"
+    elif fast_login.show_info:
+        os.system("cat {}".format(LoginInfo.CACHE_FILE))
+    elif fast_login.show_white_list:
+        os.system("cat {}".format(WhiteList.WHITE_LIST_CONFIG))
     else:
-        print '''FastLogin:\n\tx host [user] [password]\n'''
-    FastLogin().execute(host, user, password)
+        fast_login.execute(host, user, password)
