@@ -6,7 +6,7 @@ set timeout -1
 spawn ssh -o NumberOfPasswordPrompts=1 $user@$ip
 expect {
 "*yes/no" { send "yes\r"; exp_continue }
-"*password:" { send "$password\r"; exp_continue }
+"*password*:" { send "$password\r"; exp_continue }
 "*Permission denied*" { exit 1 }
 "*Could not resolve*" { exit 1 }
 "*$*" { interact }
