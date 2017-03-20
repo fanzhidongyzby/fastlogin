@@ -2,7 +2,7 @@ import sys
 import os
 import shutil
 import traceback
-
+import commands
 
 class LoginInfo:
     CACHE_FILE = os.path.expanduser("~") + "/.fastlogin.info"
@@ -169,7 +169,9 @@ class FastLogin:
             login_info.save()
         else:
             login_info.try_remove(host, user, password)
-            print "Fast Login failed."
+            if os.system("which pbcopy > /dev/null") == 0:
+                commands.getstatusoutput("bash -c 'echo -n x {} {} {}' | pbcopy".format(host, user, password))
+                print "Fast Login failed, login info has been copied, use Ctrl + V to try again."
 
 
 if __name__ == '__main__':
