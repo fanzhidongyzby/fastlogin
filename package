@@ -1,0 +1,6 @@
+#!/bin/bash
+cd $(dirname $0)
+ROOT=$(pwd)
+
+chmod +x install uninstall
+tar zcvf ../fastlogin.tgz * 
