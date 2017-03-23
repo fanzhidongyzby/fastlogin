@@ -1,8 +1,4 @@
 #!/bin/bash
-if [[ -z $(readlink $0) ]]; then
-  cd $(dirname $0)
-else
-  cd $(dirname $(readlink $0))
-fi
+cd $(dirname $0)
 ROOT=$(pwd)
 python $ROOT/main.py $@
