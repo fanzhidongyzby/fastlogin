@@ -1,8 +1,19 @@
 #!/bin/bash
+PREFIX=/usr/local
+if [[ -d $1 ]]; then
+  PREFIX=$1
+elif [[ -n $1 ]]; then
+  echo "Invalid install directory $1"
+  exit 1
+fi
+PREFIX=$(cd $PREFIX; pwd)
+echo "Install fastlogin into $PREFIX"
 cd $(dirname $0)
 ROOT=$(pwd)
-sudo rm -f /usr/local/bin/x
-sudo mkdir -p /usr/local/fastlogin
-sudo cp $ROOT/x $ROOT/ssh-expect $ROOT/main.py /usr/local/fastlogin
-sudo ln -s /usr/local/fastlogin/x /usr/local/bin/x
-sudo chmod +x /usr/local/fastlogin/*
+mkdir -p $PREFIX
+mkdir -p $PREFIX/bin
+rm -f $PREFIX/bin/x
+mkdir -p $PREFIX/fastlogin
+cp $ROOT/x $ROOT/ssh-expect $ROOT/main.py $PREFIX/fastlogin
+ln -s $PREFIX/fastlogin/x $PREFIX/bin/x
+chmod +x $PREFIX/fastlogin/*

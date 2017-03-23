@@ -1,5 +1,14 @@
 #!/bin/bash
+PREFIX=/usr/local
+if [[ -d $1 ]]; then
+  PREFIX=$1
+elif [[ -n $1 ]]; then
+  echo "Invalid install directory $1"
+  exit 1
+fi
+PREFIX=$(cd $PREFIX; pwd)
+echo "Uninstall fastlogin from $PREFIX"
 cd $(dirname $0)
 ROOT=$(pwd)
-sudo rm -f /usr/local/bin/x
-sudo rm -rf /usr/local/fastlogin
+sudo rm -f $PREFIX/bin/x
+sudo rm -rf $PREFIX/fastlogin
