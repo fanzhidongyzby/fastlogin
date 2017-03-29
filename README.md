@@ -111,4 +111,7 @@ Connection to login-host closed.
 (florian) ~ $ x login-host
 ...
 Fast Login failed, login info has been copied, use Ctrl + V to try again.
+(florian) ~ $ x login-host -s new-token
+...
+[user1@login-host /home/user] $
 ```
