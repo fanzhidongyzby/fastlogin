@@ -2,13 +2,23 @@
 set ip [lindex $argv 0 ]
 set user [lindex $argv 1 ]
 set password [lindex $argv 2 ]
+set proxy_ip [lindex $argv 3 ]
+set proxy_user [lindex $argv 4 ]
+set proxy_password [lindex $argv 5 ]
 set timeout -1
-spawn ssh -o NumberOfPasswordPrompts=1 $user@$ip
+if {$proxy_ip != "" && $proxy_user != "" && $proxy_password != ""} {
+  set proxy "-o ProxyCommand=ssh $proxy_user@$proxy_ip exec nc %h %p"
+} else {
+  set proxy ""
+}
+spawn ssh $user@$ip -o NumberOfPasswordPrompts=1 $proxy
 expect {
 "*yes/no" { send "yes\r"; exp_continue }
-"*password*:" { send "$password\r"; exp_continue }
+"*$ip*password*:" { send "$password\r"; exp_continue }
+"*password*:" { send "$proxy_password\r"; exp_continue }
 "*Permission denied*" { exit 1 }
 "*Could not resolve*" { exit 1 }
+"*Connection closed*" { exit 1 }
 "*$*" { interact }
 "*#*" { interact }
 }
