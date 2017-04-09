@@ -359,6 +359,27 @@ class LoginInfo:
                         # only remove the user item
                         del self.host_map[record.host][record.user]
 
+    # remove host or user
+    def remove_host_or_user(self, host, user):
+        if not host:
+            return False
+        if host in white_list:
+            log.error("Host '{}' in white list, can not remove", host)
+            return False
+        # find and remove
+        if host in self.host_map:
+            if not user:
+                # remove host
+                del self.host_map[host]
+            elif user in self.host_map[host]:
+                if len(self.host_map[host]) == 1:
+                    # only one record, remove host
+                    del self.host_map[host]
+                else:
+                    # only remove the user item
+                    del self.host_map[host][user]
+        return True
+
     # clear
     def clear(self):
         self.host_map.clear()

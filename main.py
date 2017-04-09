@@ -3,6 +3,7 @@ import commands
 import os
 import sys
 
+from config import config
 from logger import log
 from login_info import login_info, LoginRecord
 from message import Message
@@ -11,6 +12,8 @@ from white_list import white_list
 
 class FastLogin:
     def __init__(self, args):
+        self.ssh_keep_alive = config.get_string("ssh.keep.alive", "72h")
+
         self.option_values = self.__parse_args(args)
 
         self.host, self.user, self.password = self.__read_values("", 3)
@@ -18,6 +21,7 @@ class FastLogin:
         self.proxy_password = None
         (self.password_suffix) = self.__read_values("-s", 1)
         self.show_info = self.__read_values("-i", 0) or self.__read_values("-I", 0)
+        self.remove_host, self.remove_user = self.__read_values("-i-", 2)
         self.show_password = self.__read_values("-I", 0)
         self.show_white_list = self.__read_values("-w", 0)
         self.add_white_list = self.__read_values("-w+", 1)
@@ -76,6 +80,7 @@ class FastLogin:
                      "\t-p <host> [<user>]\tSpecify proxy host and user\n"
                      "\t-s <suffix>\t\tPassword suffix (proxy use first)\n"
                      "\t-i\t\t\tShow detail login info\n"
+                     "\t-i- <host> [<user>]\tRemove host or user info\n"
                      "\t-I\t\t\tShow detail login info \033[31m(see password)\033[0m\n"
                      "\t-w\t\t\tShow white list config\n"
                      "\t-w+ <host>\t\tAdd white list record\n"
@@ -85,7 +90,7 @@ class FastLogin:
                      "\t-v\t\t\tShow version\n"
                      )
         elif self.show_version:
-            log.tips("FastLogin V1.0.0\n"
+            log.tips("FastLogin V1.0.0 Author: Florian alibaba.inc\n"
                      "FastLogin is a SSH tool which can help you:\n"
                      "  1. Record login host, user and password.\n"
                      "  2. Fast pattern match to fill login info.\n"
@@ -95,7 +100,10 @@ class FastLogin:
                      "  6. SSH channel reuse.\n"
                      )
         elif self.show_info:
-            log.info(login_info.color_string(self.show_password))
+            info = login_info.color_string(self.show_password)
+            if info:
+                log.info("Detail login records:")
+                log.info(info)
         elif self.show_white_list:
             config = white_list.get()
             if config:
@@ -103,6 +111,15 @@ class FastLogin:
                 log.tips("\n".join(config))
             else:
                 log.info("White list is empty")
+        elif self.remove_host:
+            ok = login_info.remove_host_or_user(self.remove_host, self.remove_user)
+            login_info.save()
+            if ok:
+                if self.remove_user:
+                    log.tips("Login record of user {}@{} removed",
+                             self.remove_user, self.remove_host)
+                else:
+                    log.tips("Login records of host {} removed", self.remove_host)
         elif self.add_white_list:
             white_list.add(self.add_white_list)
             white_list.save()
@@ -139,7 +156,7 @@ class FastLogin:
         if self.proxy_host:
             proxy = login_info.search(self.proxy_host, self.proxy_user)
             if not LoginRecord.valid(proxy):
-                log.error("Proxy {}@{} has not been login", self.proxy_host, self.proxy_user)
+                log.error("Proxy {}@{} has not been login", self.proxy_user, self.proxy_host)
                 return
             self.proxy_host, self.proxy_user = proxy.host, proxy.user
             record.proxy_host, record.proxy_user = proxy.host, proxy.user
@@ -156,11 +173,12 @@ class FastLogin:
                 if not self.password_suffix else record.password + self.password_suffix
 
         # ssh login
-        cmd = Message.format("expect ssh-expect {} {} {} {} {} {} 2>/dev/null",
+        cmd = Message.format("expect ssh-expect {} {} {} {} {} {} {} 2>/dev/null",
                              self.host, self.user, self.password,
                              proxy and self.proxy_host or "",
                              proxy and self.proxy_user or "",
-                             proxy and self.proxy_password or ""
+                             proxy and self.proxy_password or "",
+                             self.ssh_keep_alive
                              )
         code = os.system(cmd)
         try:

@@ -5,8 +5,18 @@ set password [lindex $argv 2 ]
 set proxy_ip [lindex $argv 3 ]
 set proxy_user [lindex $argv 4 ]
 set proxy_password [lindex $argv 5 ]
+set alive [lindex $argv 6 ]
 set timeout -1
-set reuse "-oControlMaster=auto -oControlPersist=72h -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r"
+
+if {$alive == ""} {
+  if {$proxy_ip != "" && $proxy_user != "" && $proxy_password != ""} {
+    set alive "72h"
+  } else {
+    set alive $proxy_ip
+  }
+}
+
+set reuse "-oControlMaster=auto -oControlPersist=$alive -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r"
 if {$proxy_ip != "" && $proxy_user != "" && $proxy_password != ""} {
   set proxy "-oProxyCommand=ssh $reuse $proxy_user@$proxy_ip exec nc %h %p"
 } else {
@@ -16,7 +26,7 @@ if {$proxy_ip != "" && $proxy_user != "" && $proxy_password != ""} {
 if {$proxy != ""} {
   spawn -noecho ssh $user@$ip -oNumberOfPasswordPrompts=1 $proxy
 } else {
-  spawn -noecho ssh $user@$ip -oControlMaster=auto -oControlPersist=72h -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r -oNumberOfPasswordPrompts=1
+  spawn -noecho ssh $user@$ip -oControlMaster=auto -oControlPersist=$alive -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r -oNumberOfPasswordPrompts=1
 }
 expect {
 "*yes/no" { send "yes\r"; exp_continue }
