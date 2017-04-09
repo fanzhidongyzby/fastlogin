@@ -14,6 +14,6 @@ mkdir -p $PREFIX
 mkdir -p $PREFIX/bin
 rm -f $PREFIX/bin/x
 mkdir -p $PREFIX/fastlogin
-cp $ROOT/x $ROOT/ssh-expect $ROOT/main.py $PREFIX/fastlogin
+cp $ROOT/x $ROOT/ssh-expect $ROOT/*.py $ROOT/*.properties $PREFIX/fastlogin
 ln -s $PREFIX/fastlogin/x $PREFIX/bin/x
 chmod +x $PREFIX/fastlogin/*

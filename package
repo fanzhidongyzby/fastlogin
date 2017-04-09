@@ -3,4 +3,5 @@ cd $(dirname $0)
 ROOT=$(pwd)
 
 chmod +x install uninstall
+rm *.pyc
 tar zcvf ../fastlogin.tgz * 
