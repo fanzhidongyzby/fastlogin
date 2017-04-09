@@ -1,268 +1,187 @@
-import sys
-import os
-import shutil
-import traceback
+from __future__ import print_function
 import commands
-import base64
+import os
+import sys
 
-
-class WhiteList:
-    WHITE_LIST_CONFIG = os.path.expanduser("~") + "/.fastlogin.whitelist"
-
-    def __init__(self):
-        self.config = []
-        try:
-            with open(WhiteList.WHITE_LIST_CONFIG, "r") as config_file:
-                lines = config_file.readlines()
-                for line in lines:
-                    if line:
-                        self.config.append(line.strip())
-        except:
-            pass
-
-    def __contains__(self, item):
-        return self.config and item in self.config
-
-
-class LoginInfo:
-    CACHE_FILE = os.path.expanduser("~") + "/.fastlogin.info"
-    CACHE_FILE_TMP = CACHE_FILE + ".tmp"
-    MAX_LINE_COUNT = 100
-    DEBUG = False
-
-    def __process_exception(self):
-        if self.DEBUG:
-            print traceback.format_exc()
-        else:
-            pass
-
-    def __init__(self):
-        os.system("touch " + LoginInfo.CACHE_FILE)
-        self.password_changed = False
-        self.host_map = {}
-        self.whitelist = WhiteList()
-
-    def __parse(self, lines):
-        host_map = {}
-        lines = lines[-LoginInfo.MAX_LINE_COUNT:]
-        for line in lines:
-            cols = line.split()
-            if len(cols) != 3:
-                continue
-            (host, user, password) = (cols[0], cols[1], cols[2])
-            if not host_map.has_key(host):
-                host_map[host] = {}
-            host_map[host][user] = base64.decodestring(password)
-            self.host_map = host_map
-
-    def search(self, host, user, password):
-        if not host:
-            return (None, None, None)
-        try:
-            with open(LoginInfo.CACHE_FILE, "r") as cache:
-                # load login info
-                self.__parse(cache.readlines())
-        except:
-            self.__process_exception()
-
-        host_map = self.host_map
-
-        # match host
-        choose_host = None
-        matched_hosts = filter(
-            lambda h: h.find(host) != -1 if host else False,
-            host_map.keys()
-        )
-        if len(matched_hosts) > 1:
-            print "Following hosts were found:"
-            for index, item in enumerate(matched_hosts):
-                print "\t {0}: {1}".format(index + 1, item)
-            try:
-                choose = int(raw_input("Choose one to continue: ").strip())
-                choose_host = matched_hosts[choose - 1]
-            except:
-                self.__process_exception()
-        else:
-            choose_host = matched_hosts[0] if matched_hosts else host
-
-        # choose user
-        choose_user = None
-        if choose_host:
-            if not host_map.has_key(choose_host):
-                host_map[host] = {}
-            if user:
-                choose_user = user
-            else:
-                matched_users = host_map[choose_host].keys()
-                if len(matched_users) > 1:
-                    print "Following users / password were found:"
-                    for index, item in enumerate(matched_users):
-                        print "\t {0}: {1} / {2}".format(index + 1, item, host_map[choose_host][item])
-                    try:
-                        choose = int(raw_input("Choose one to continue: ").strip())
-                        choose_user = matched_users[choose - 1]
-                    except:
-                        self.__process_exception()
-                else:
-                    if matched_users:
-                        choose_user = matched_users[0]
-
-            # choose password
-            if choose_user:
-                if not host_map[choose_host].has_key(choose_user):
-                    if not password:
-                        print "Password of {1}@{0} must be set.".format(choose_host, choose_user)
-                        sys.exit(1)
-                    host_map[choose_host][choose_user] = password
-                choose_password = host_map[choose_host][choose_user]
-                if password and choose_password != password:
-                    self.password_changed = True
-                    host_map[choose_host][choose_user] = password
-                return (choose_host, choose_user, host_map[choose_host][choose_user])
-            else:
-                print "No user has been choose."
-                sys.exit(1)
-        else:
-            print "No host has been choose."
-            sys.exit(1)
-
-    def try_remove(self, host0, user0, password0):
-        host_map = self.host_map
-
-        for (host, user_map) in host_map.items():
-            if host in self.whitelist:
-                continue
-            for (user, password) in user_map.items():
-                if host == host0 and user == user0 and password == password0:
-                    if len(host_map[host]) == 1:
-                        # only one record, remove host
-                        del host_map[host]
-                    else:
-                        # only remove the user item
-                        del host_map[host][user]
-
-                    # refresh config
-                    self.save()
-                    return
-
-    def save(self):
-        host_map = self.host_map
-
-        try:
-            with open(LoginInfo.CACHE_FILE_TMP, "w") as cache:
-                for (host, user_map) in host_map.items():
-                    for (user, password) in user_map.items():
-                        cache.write("{0} {1} {2}\n".format(host, user, base64.encodestring(password).strip()))
-                cache.flush()
-            # copy file after saved ok
-            shutil.copyfile(LoginInfo.CACHE_FILE_TMP, LoginInfo.CACHE_FILE)
-            os.remove(LoginInfo.CACHE_FILE_TMP)
-
-        except:
-            self.__process_exception()
-
-    def show_hosts(self):
-        self.host_map = {}
-        try:
-            with open(LoginInfo.CACHE_FILE, "r") as cache:
-                # load login info
-                self.__parse(cache.readlines())
-        except:
-            self.__process_exception()
-        if self.host_map:
-            print "Following hosts can be fast login:\033[32m"
-            print "\n".join(self.host_map.keys())
-            print "\033[0m"
+from logger import log
+from login_info import login_info, LoginRecord
+from message import Message
+from white_list import white_list
 
 
 class FastLogin:
-    def __init__(self, option_values):
-        self.password_suffix = None
-        self.show_info = False
-        self.show_white_list = False
-        self.show_help = False
+    def __init__(self, args):
+        self.option_values = self.__parse_args(args)
 
-        if not option_values:
+        self.host, self.user, self.password = self.__read_values("", 3)
+        self.proxy_host, self.proxy_user = self.__read_values("-p", 2)
+        self.proxy_password = None
+        (self.password_suffix) = self.__read_values("-s", 1)
+        self.show_info = self.__read_values("-i", 0) or self.__read_values("-I", 0)
+        self.show_password = self.__read_values("-I", 0)
+        self.show_white_list = self.__read_values("-w", 0)
+        self.add_white_list = self.__read_values("-w+", 1)
+        self.remove_white_list = self.__read_values("-w-", 1)
+        self.debug_on = self.__read_values("-D", 0)
+        self.show_help = self.__read_values("-h", 0)
+        self.show_version = self.__read_values("-v", 0)
+
+    # parse command line
+    def __parse_args(self, args):
+        option_values = {}
+
+        if not args:
+            return option_values
+
+        option_indices = []
+        for (index, arg) in enumerate(args):
+            if index == 0 or arg.startswith("-"):
+                option_indices.append(index)
+
+        for (i, option_index) in enumerate(option_indices):
+            option = "" if option_index == 0 else args[option_index]
+            next_index = option_indices[i + 1] if i + 1 < len(option_indices) else len(args)
+            value = args[option_index + 1:next_index]
+            option_values[option] = value
+        return option_values
+
+    # retrieve args
+    def __list_to_tuple(self, values, length):
+        list_values = []
+        for i in range(length):
+            if i < len(values):
+                list_values.append(values[i])
+            else:
+                list_values.append(None)
+        return tuple(list_values)
+
+    # retrieve args by key
+    def __read_values(self, key, count):
+        if count == 0:
+            return key in self.option_values
+        values = self.option_values[key] if key in self.option_values else []
+        tuple_values = self.__list_to_tuple(values, count)
+        if count == 1:
+            return tuple_values[0]
+        else:
+            return tuple_values
+
+    def run(self):
+        if self.debug_on:
+            log.debug_on()
+        if self.show_help:
+            log.info("FastLogin:\n"
+                     "\tx host [user] [password] [option [value]*]\n"
+                     "options:\n"
+                     "\t-p <host> [<user>]\tSpecify proxy host and user\n"
+                     "\t-s <suffix>\t\tPassword suffix (proxy use first)\n"
+                     "\t-i\t\t\tShow detail login info\n"
+                     "\t-I\t\t\tShow detail login info \033[31m(see password)\033[0m\n"
+                     "\t-w\t\t\tShow white list config\n"
+                     "\t-w+ <host>\t\tAdd white list record\n"
+                     "\t-w- <host>\t\tRemove white list record\n"
+                     "\t-D\t\t\tTurn debug on\n"
+                     "\t-h\t\t\tShow this help message\n"
+                     "\t-v\t\t\tShow version\n"
+                     )
+        elif self.show_version:
+            log.tips("FastLogin V1.0.0\n"
+                     "FastLogin is a SSH tool which can help you:\n"
+                     "  1. Record login host, user and password.\n"
+                     "  2. Fast pattern match to fill login info.\n"
+                     "  3. Dynamic token support with password suffix.\n"
+                     "  4. Proxy login support.\n"
+                     "  5. White list support to avoid login info auto-removed.\n"
+                     "  6. SSH channel reuse.\n"
+                     )
+        elif self.show_info:
+            log.info(login_info.color_string(self.show_password))
+        elif self.show_white_list:
+            config = white_list.get()
+            if config:
+                log.info("White list config:")
+                log.tips("\n".join(config))
+            else:
+                log.info("White list is empty")
+        elif self.add_white_list:
+            white_list.add(self.add_white_list)
+            white_list.save()
+            log.tips("White list record '{}' added", self.add_white_list)
+        elif self.remove_white_list:
+            white_list.remove(self.remove_white_list)
+            white_list.save()
+            log.tips("White list record '{}' removed", self.remove_white_list)
+        elif not self.host:
+            # show all hosts
+            hosts = login_info.get_hosts()
+            if hosts:
+                log.info("Following hosts can be fast login:")
+                log.tips("\n".join(hosts))
+        else:
+            self.__login()
+
+    def __login(self):
+        # search login record
+        record = login_info.search(self.host, self.user)
+        if not record:
             return
-        if "-s" in option_values:
-            self.password_suffix = option_values["-s"]
-            if not self.password_suffix:
-                print "Password suffix not provided."
-                exit(1)
-        elif "-h" in option_values:
-            self.show_help = True
-        elif "-i" in option_values:
-            self.show_info = True
-        elif "-w" in option_values:
-            self.show_white_list = True
 
-    def execute(self, host, user, password):
-        login_info = LoginInfo()
-
-        # show all hosts
-        if not host:
-            login_info.show_hosts()
+        # process record
+        record.password = self.password or record.password or login_info.force_read("password", True)
+        if not record.password:
             return
+        self.host, self.user, self.password = record.host, record.user, record.password
 
-        # search password
-        (host, user, password) = login_info.search(host, user, password)
-        password = password if not self.password_suffix else password + self.password_suffix
+        # process proxy
+        proxy = None
+        (self.proxy_host, self.proxy_user) = (self.proxy_host, self.proxy_user) \
+            if self.proxy_host else (record.proxy_host, record.proxy_user)
+        if self.proxy_host:
+            proxy = login_info.search(self.proxy_host, self.proxy_user)
+            if not LoginRecord.valid(proxy):
+                log.error("Proxy {}@{} has not been login", self.proxy_host, self.proxy_user)
+                return
+            self.proxy_host, self.proxy_user = proxy.host, proxy.user
+            record.proxy_host, record.proxy_user = proxy.host, proxy.user
+
+        # process suffix
+        if proxy:
+            record.use_password_suffix = False
+            proxy.use_password_suffix = not not self.password_suffix
+            self.proxy_password = proxy.password \
+                if not self.password_suffix else proxy.password + self.password_suffix
+        else:
+            record.use_password_suffix = not not self.password_suffix
+            self.password = record.password \
+                if not self.password_suffix else record.password + self.password_suffix
 
         # ssh login
-        code = os.system("expect ssh-expect {0} {1} {2} 2>/dev/null".format(host, user, password))
-        if code == 0:
-            if login_info.password_changed:
-                print "Password updated."
+        cmd = Message.format("expect ssh-expect {} {} {} {} {} {} 2>/dev/null",
+                             self.host, self.user, self.password,
+                             proxy and self.proxy_host or "",
+                             proxy and self.proxy_user or "",
+                             proxy and self.proxy_password or ""
+                             )
+        code = os.system(cmd)
+        try:
+            if code == 0:
+                login_info.add(record)
+            else:
+                login_info.remove(record)
+                if os.system("which pbcopy > /dev/null") == 0:
+                    cmd = Message.format("bash -c 'echo -n x {} {} {}{}{}' | pbcopy",
+                                         record.host, record.user, record.password,
+                                         proxy and Message.format(" -p {} {}", proxy.host, proxy.user) or "",
+                                         not not self.password_suffix
+                                         and Message.format(" -s {}", self.password_suffix) or ""
+                                         )
+
+                    commands.getstatusoutput(cmd)
+                    print("Fast Login failed, login info has been copied, use Ctrl + V to try again.")
+        finally:
             login_info.save()
-        else:
-            login_info.try_remove(host, user, password)
-            if os.system("which pbcopy > /dev/null") == 0:
-                commands.getstatusoutput("bash -c 'echo -n x {} {} {}' | pbcopy".format(host, user, password))
-                print "Fast Login failed, login info has been copied, use Ctrl + V to try again."
 
 
 if __name__ == '__main__':
-    (option, value, host, user, password) = (None, None, None, None, None)
-
-    # retrieve option
-    option_values = {}
-    login_args = []
-    index = 1
-    length = len(sys.argv)
-    while index < length:
-        arg = sys.argv[index]
-        if arg.startswith("-"):
-            option = arg
-            if index + 1 < length:
-                value = sys.argv[index + 1]
-            option_values[option] = value
-            index += 2
-        else:
-            login_args.append(arg)
-            index += 1
-
-    # process login info
-    length = len(login_args)
-    if length >= 1:
-        host = login_args[0]
-    if length >= 2:
-        user = login_args[1]
-    if length >= 3:
-        password = login_args[2]
-
-    # run command
-    fast_login = FastLogin(option_values)
-    if fast_login.show_help:
-        print "FastLogin:\n" \
-              "\tx host [user] [password] [option [value]]\n" \
-              "options:\n" \
-              "\t-s suffix\t\tAppend dynamic suffix to password\n" \
-              "\t-i\t\t\tShow recorded login info\n" \
-              "\t-w\t\t\tShow white list config\n" \
-              "\t-h\t\t\tShow this help message\n"
-    elif fast_login.show_info:
-        os.system("cat {}".format(LoginInfo.CACHE_FILE))
-    elif fast_login.show_white_list:
-        os.system("cat {}".format(WhiteList.WHITE_LIST_CONFIG))
-    else:
-        fast_login.execute(host, user, password)
+    fast_login = FastLogin(sys.argv)
+    fast_login.run()
