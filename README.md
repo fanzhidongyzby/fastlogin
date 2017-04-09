@@ -189,12 +189,11 @@ ssh.keep.alive=72h
 前边的示例中，都把登录密码写在命令行中了，显然有潜在的安全风险。因此FastLogin提供了交互式的输入方式。
 
 ```bash
-(florian) ~/code/fastlogin $ x arch
+(florian) ~ $ x arch
 Host's name: arch
 User must be provided: admin
 User's name: admin
 Password must be provided:
-spawn ssh admin@arch -oControlMaster=auto -oControlPersist=72h -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r -oNumberOfPasswordPrompts=1
 Last login: Wed Dec 21 18:22:31 2016 from 10.211.55.2
 [admin@arch ~]$
 ```
@@ -202,19 +201,19 @@ Last login: Wed Dec 21 18:22:31 2016 from 10.211.55.2
 白名单机制主要用于备忘关键主机，以防偶然登录失败，导致登录记录被自动清除的问题。
 
 ```bash
-(florian) ~/code/fastlogin $ x -w+ centos
+(florian) ~ $ x -w+ centos
 White list record 'centos' added
-(florian) ~/code/fastlogin $ x -w
+(florian) ~ $ x -w
 White list config:
 centos
-(florian) ~/code/fastlogin $ x -i- centos
+(florian) ~ $ x -i- centos
 Host 'centos' in white list, can not remove
 ```
 
 以上介绍了FastLogin主要的功能，如果你在使用过程中遇到问题，或者有更好的建议，欢迎和我联系。
 
 ```bash
-(florian) ~/code/fastlogin $ x -v
+(florian) ~ $ x -v
 FastLogin V1.0.0 Author: Florian alibaba.inc
 FastLogin is a SSH tool which can help you:
   1. Record login host, user and password.
