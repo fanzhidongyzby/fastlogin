@@ -186,7 +186,7 @@ class FastLogin:
                 login_info.add(record)
             else:
                 login_info.remove(record)
-                if os.system("which pbcopy > /dev/null") == 0:
+                if os.system("which pbcopy &> /dev/null") == 0:
                     cmd = Message.format("bash -c 'echo -n x {} {} {}{}{}' | pbcopy",
                                          record.host, record.user, record.password,
                                          proxy and Message.format(" -p {} {}", proxy.host, proxy.user) or "",
