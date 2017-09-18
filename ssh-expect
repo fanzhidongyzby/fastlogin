@@ -18,7 +18,7 @@ if {$alive == ""} {
 }
 
 if {$proxy_ip != "" && $proxy_user != "" && $proxy_password != ""} {
-  spawn ssh $proxy_user@$proxy_ip -oControlMaster=auto -oControlPersist=$alive -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r -oNumberOfPasswordPrompts=1
+  spawn -noecho ssh $proxy_user@$proxy_ip -oControlMaster=auto -oControlPersist=$alive -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r -oNumberOfPasswordPrompts=1
   expect {
     "*yes/no" { send "yes\r"; exp_continue }
     "*password*:" { send "$proxy_password\r"; exp_continue }
@@ -54,7 +54,7 @@ if {$proxy_ip != "" && $proxy_user != "" && $proxy_password != ""} {
     }
   }
 } else {
-  spawn ssh $user@$ip -oControlMaster=auto -oControlPersist=$alive -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r -oNumberOfPasswordPrompts=1
+  spawn -noecho ssh $user@$ip -oControlMaster=auto -oControlPersist=$alive -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r -oNumberOfPasswordPrompts=1
   expect {
     "*yes/no" { send "yes\r"; exp_continue }
     "*$ip*password*:" { send "$password\r"; exp_continue }
