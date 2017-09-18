@@ -61,6 +61,7 @@ options:
 FastLogin会自动记录成功登录过的机器名和用户密码。
 1. 同一机器使用不同账户登录成功后仍能记录新的账户信息。
 2. 同一机器使用相同帐户，但是不同密码登录成功后会自动更新密码信息。
+3. 登录失败后会自动删除清除原有登录信息。（如果怕误操作，可以设置config.properties的auto.remove=false）
 
 ```bash
 (florian) ~ $ x arch admin admin
@@ -179,6 +180,7 @@ FastLogin只保存了固定的密码部分，动态密码需要登录时用-s选
 # /usr/local/fastlogin/config.properties
 debug=off
 ssh.keep.alive=72h
+auto.remove=true
 
 ```
 
