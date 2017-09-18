@@ -13,6 +13,7 @@ from white_list import white_list
 class FastLogin:
     def __init__(self, args):
         self.ssh_keep_alive = config.get_string("ssh.keep.alive", "72h")
+        self.auto_remove = config.get_boolean("auto.remove")
 
         self.option_values = self.__parse_args(args)
 
@@ -185,7 +186,9 @@ class FastLogin:
             if code == 0:
                 login_info.add(record)
             else:
-                login_info.remove(record)
+                if self.auto_remove:
+                    # remove failed record
+                    login_info.remove(record)
                 if os.system("which pbcopy &> /dev/null") == 0:
                     cmd = Message.format("bash -c 'echo -n x {} {} {}{}{}' | pbcopy",
                                          record.host, record.user, record.password,

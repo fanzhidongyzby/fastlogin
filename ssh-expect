@@ -13,6 +13,7 @@ if {$alive == ""} {
     set alive "72h"
   } else {
     set alive $proxy_ip
+    set proxy_password $password
   }
 }
 
