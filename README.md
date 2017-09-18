@@ -1,5 +1,5 @@
 # FastLogin
-ssh快速登录工具，免去记忆、输入机器、用户名和密码的烦恼。
+ssh快速登录工具，免去记忆、输入机器、用户名和密码的烦恼。无论是直接登录，还是通过**跳板机**间接登录，都可以做到一键登录自动完成！
 
 后台开发或者运营人员经常需要ssh登录大量的服务器，记下那么多枯燥的主机名和用户名、密码实在头疼，即便是用登录工具(XShell, SecureCRT, Putty)自带的记录主机的功能也不甚方便。FastLogin通过一个简单的脚本，帮助你快速关键字检索要登录的机器，并能自动填充用户名和密码。
 
@@ -61,7 +61,6 @@ options:
 FastLogin会自动记录成功登录过的机器名和用户密码。
 1. 同一机器使用不同账户登录成功后仍能记录新的账户信息。
 2. 同一机器使用相同帐户，但是不同密码登录成功后会自动更新密码信息。
-3. 登录失败后会自动删除清除原有登录信息。（如果怕误操作，可以设置config.properties的auto.remove=false）
 
 ```bash
 (florian) ~ $ x arch admin admin
@@ -109,7 +108,7 @@ Last login: Wed Dec 21 17:31:13 2016 from 10.211.55.2
 
 ### 4. 跳板机登录支持
 
-使用SSH的共享通道特性，可以实现跨机器登录。
+FastLogin可以实现跨机器登录，这在使用跳板机登录场景中十分有用。
 
 ```bash
 (florian) ~ $ x centos admin admin -p arch admin
@@ -123,7 +122,7 @@ Last login: Wed Dec 21 04:14:07 2016 from 10.211.55.4
 [admin@localhost ~]$
 ```
 
-和普通登录一样，FastLogin会记录下来当前机器通过哪个跳板机登录成功过：
+FastLogin会记录下来当前机器通过哪个跳板机登录成功过：
 
 ```bash
 (florian) ~ $ x -I
@@ -200,7 +199,8 @@ Last login: Wed Dec 21 18:22:31 2016 from 10.211.55.2
 [admin@arch ~]$
 ```
 
-白名单机制主要用于备忘关键主机，以防偶然登录失败，导致登录记录被自动清除的问题。
+登录失败后会自动删除清除原有登录信息，白名单机制主要用于备忘关键主机信息。
+另外，也可以通过设置config.properties的auto.remove=false禁止登录失败清除主机信息。
 
 ```bash
 (florian) ~ $ x -w+ centos

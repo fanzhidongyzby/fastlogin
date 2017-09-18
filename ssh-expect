@@ -17,27 +17,54 @@ if {$alive == ""} {
   }
 }
 
-set reuse "-oControlMaster=auto -oControlPersist=$alive -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r"
 if {$proxy_ip != "" && $proxy_user != "" && $proxy_password != ""} {
-  set proxy "-oProxyCommand=ssh $reuse $proxy_user@$proxy_ip exec nc %h %p"
+  spawn ssh $proxy_user@$proxy_ip -oControlMaster=auto -oControlPersist=$alive -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r -oNumberOfPasswordPrompts=1
+  expect {
+    "*yes/no" { send "yes\r"; exp_continue }
+    "*password*:" { send "$proxy_password\r"; exp_continue }
+    "*Permission denied*" { exit 1 }
+    "*Could not resolve*" { exit 1 }
+    "*Connection closed*" { exit 1 }
+    "*Connection refused*" { exit 1 }
+    "*$*" {
+      send "ssh $user@$ip\r"
+	  expect {
+		"*yes/no" { send "yes\r"; exp_continue }
+		"*password*:" { send "$password\r"; exp_continue }
+		"*Permission denied*" { exit 1 }
+		"*Could not resolve*" { exit 1 }
+		"*Connection closed*" { exit 1 }
+		"*Connection refused*" { exit 1 }
+		"*$*" { interact }
+		"*#*" { interact }
+      }
+    }
+    "*#*" {
+      send "ssh $user@$ip\r"
+	  expect {
+		"*yes/no" { send "yes\r"; exp_continue }
+		"*password*:" { send "$password\r"; exp_continue }
+		"*Permission denied*" { exit 1 }
+		"*Could not resolve*" { exit 1 }
+		"*Connection closed*" { exit 1 }
+		"*Connection refused*" { exit 1 }
+		"*$*" { interact }
+		"*#*" { interact }
+      }
+    }
+  }
 } else {
-  set proxy ""
-}
-
-if {$proxy != ""} {
-  spawn -noecho ssh $user@$ip -oNumberOfPasswordPrompts=1 $proxy
-} else {
-  spawn -noecho ssh $user@$ip -oControlMaster=auto -oControlPersist=$alive -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r -oNumberOfPasswordPrompts=1
-}
-expect {
-"*yes/no" { send "yes\r"; exp_continue }
-"*$ip*password*:" { send "$password\r"; exp_continue }
-"*password*:" { send "$proxy_password\r"; exp_continue }
-"*Permission denied*" { exit 1 }
-"*Could not resolve*" { exit 1 }
-"*Connection closed*" { exit 1 }
-"*Connection refused*" { exit 1 }
-"*$*" { interact }
-"*#*" { interact }
+  spawn ssh $user@$ip -oControlMaster=auto -oControlPersist=$alive -oControlPath=~/.fastlogin/tmp/ssh_mux_%h_%p_%r -oNumberOfPasswordPrompts=1
+  expect {
+    "*yes/no" { send "yes\r"; exp_continue }
+    "*$ip*password*:" { send "$password\r"; exp_continue }
+    "*password*:" { send "$password\r"; exp_continue }
+    "*Permission denied*" { exit 1 }
+    "*Could not resolve*" { exit 1 }
+    "*Connection closed*" { exit 1 }
+    "*Connection refused*" { exit 1 }
+    "*$*" { interact }
+    "*#*" { interact }
+  }
 }
 
