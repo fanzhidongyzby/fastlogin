@@ -37,10 +37,7 @@ class LoginRecord:
         return self is other or \
                self.host == other.host \
                and self.user == other.user \
-               and self.password == other.password \
-               and self.use_password_suffix == other.use_password_suffix \
-               and self.proxy_host == other.proxy_host \
-               and self.proxy_user == other.proxy_user
+               and self.password == other.password
 
     def __cmp__(self, other):
         if not other:
