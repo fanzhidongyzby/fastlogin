@@ -20,6 +20,7 @@ ssh快速登录工具，免去记忆、输入机器、用户名和密码的烦�
 FastLogin:
 	x host [user] [password] [option [value]*]
 options:
+    -C <command>		execute command after login
 	-p <host> [<user>]	Specify proxy host and user
 	-s <suffix>		Password suffix (proxy use first)
 	-i			Show detail login info
@@ -35,7 +36,7 @@ options:
 ```
 | 选项 |    参数     |                             含义                              |
 | ---- | ----------- | ------------------------------------------------------------- |
-| -p   | host [user] | 跳板机信息，自动从登录信息中检索                              |
+| -C   | commnad     | 登录之后执行的命令                              |
 | -s   | suffix      | 在登录密码后添加后缀登录 ，使用-p选项时，为跳板机密码添加后缀 |
 | -i   |             | 显示保存的登录信息                                            |
 | -i-  | host [user] | 删除主机或用户登录信息                                        |
@@ -185,7 +186,11 @@ auto.remove=true
 
 如果希望保活时间无限长，那么将ssh.keep.alive设为yes即可。
 
-### 7. 其他功能
+### 7. 登录之后执行命令
+```
+x 10.211.55.4 test te -s st -C "hostname -i"
+```
+### 8. 其他功能
 
 前边的示例中，都把登录密码写在命令行中了，显然有潜在的安全风险。因此FastLogin提供了交互式的输入方式。
 
