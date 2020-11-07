@@ -21,6 +21,7 @@ class FastLogin:
         self.proxy_host, self.proxy_user = self.__read_values("-p", 2)
         self.proxy_password = None
         (self.password_suffix) = self.__read_values("-s", 1)
+        self.command = self.__read_values("-C", 1)
         self.show_info = self.__read_values("-i", 0) or self.__read_values("-I", 0)
         self.remove_host, self.remove_user = self.__read_values("-i-", 2)
         self.show_password = self.__read_values("-I", 0)
