@@ -5,4 +5,4 @@ else
   cd $(dirname $(readlink $0))
 fi
 ROOT=$(pwd)
-python $ROOT/main.py $@
+python $ROOT/main.py "$@"

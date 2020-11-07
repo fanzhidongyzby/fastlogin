@@ -6,6 +6,7 @@ set proxy_ip [lindex $argv 3 ]
 set proxy_user [lindex $argv 4 ]
 set proxy_password [lindex $argv 5 ]
 set alive [lindex $argv 6 ]
+set command [lindex $argv 7 ]
 set timeout -1
 
 if {$alive == ""} {
@@ -35,8 +36,18 @@ if {$proxy_ip != "" && $proxy_user != "" && $proxy_password != ""} {
 		"*Could not resolve*" { exit 1 }
 		"*Connection closed*" { exit 1 }
 		"*Connection refused*" { exit 1 }
-		"*$*" { interact }
-		"*#*" { interact }
+		"*$*" {
+		    if {$command != ""} {
+                send "$command\r"
+            }
+            interact
+            }
+		"*#*" {
+		    if {$command != ""} {
+                send "$command\r"
+            }
+            interact
+            }
       }
     }
     "*#*" {
@@ -48,8 +59,18 @@ if {$proxy_ip != "" && $proxy_user != "" && $proxy_password != ""} {
 		"*Could not resolve*" { exit 1 }
 		"*Connection closed*" { exit 1 }
 		"*Connection refused*" { exit 1 }
-		"*$*" { interact }
-		"*#*" { interact }
+		"*$*" {
+            if {$command != ""} {
+                send "$command\r"
+            }
+            interact
+        }
+		"*#*" {
+            if {$command != ""} {
+                send "$command\r"
+            }
+            interact
+        }
       }
     }
   }
@@ -63,8 +84,18 @@ if {$proxy_ip != "" && $proxy_user != "" && $proxy_password != ""} {
     "*Could not resolve*" { exit 1 }
     "*Connection closed*" { exit 1 }
     "*Connection refused*" { exit 1 }
-    "*$*" { interact }
-    "*#*" { interact }
+    "*$*" {
+        if {$command != ""} {
+            send "$command\r"
+        }
+        interact
+    }
+    "*#*" {
+        if {$command != ""} {
+            send "$command\r"
+        }
+        interact
+    }
   }
 }
 

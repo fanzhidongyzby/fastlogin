@@ -79,6 +79,7 @@ class FastLogin:
             log.info("FastLogin:\n"
                      "\tx host [user] [password] [option [value]*]\n"
                      "options:\n"
+                     "\t-C <command>\t\texecute command after login\n"
                      "\t-p <host> [<user>]\tSpecify proxy host and user\n"
                      "\t-s <suffix>\t\tPassword suffix (proxy use first)\n"
                      "\t-i\t\t\tShow detail login info\n"
@@ -175,12 +176,13 @@ class FastLogin:
                 if not self.password_suffix else record.password + self.password_suffix
 
         # ssh login
-        cmd = Message.format("expect ssh-expect {} {} {} {} {} {} {} 2>/dev/null",
+        cmd = Message.format("expect ssh-expect {} {} {} {} {} {} {} '{}' 2>/dev/null",
                              self.host, self.user, self.password,
                              proxy and self.proxy_host or "",
                              proxy and self.proxy_user or "",
                              proxy and self.proxy_password or "",
-                             self.ssh_keep_alive
+                             self.ssh_keep_alive,
+                             self.command and self.command or ""
                              )
         code = os.system(cmd)
         try:
